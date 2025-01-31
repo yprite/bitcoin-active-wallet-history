@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitcoin On-Chain Data - Active Addresses</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 20px;
+        }
+        #chart-container {
+            width: 80%;
+            margin: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Bitcoin On-Chain Data: Active Addresses</h1>
+    <p>This page provides an overview of Bitcoin active addresses using interactive charts.</p>
+    
+    <label for="time-range">Select Time Range:</label>
+    <select id="time-range">
+        <option value="7d">Last 7 Days</option>
+        <option value="30d">Last 30 Days</option>
+        <option value="1y">Last 1 Year</option>
+        <option value="3y">Last 3 Years</option>
+        <option value="5y">Last 5 Years</option>
+        <option value="10y">Last 10 Years</option>
+        <option value="all">Since Inception</option>
+    </select>
+    
+    <div id="chart-container">
+        <canvas id="active-addresses-chart"></canvas>
+    </div>
+    
+    <script>
+        const proxyUrl = "https://corsproxy.io/?";
+        const apiUrl = "https://api.blockchain.info/charts/n-unique-addresses?timespan=";
+        const format = "&format=json";
+
+        async function fetchData(timeRange) {
+            try {
+                const response = await fetch(proxyUrl + apiUrl + timeRange + format);
+                if (!response.ok) {
+                    throw new Error("Failed to fetch data");
+                }
+                const data = await response.json();
+                return data.values.map(entry => ({ x: new Date(entry.x * 1000), y: entry.y }));
+            } catch (error) {
+                console.error("Error fetching data:", error);
+                return [];
+            }
+        }
+
+        async function updateChart(timeRange) {
+            const chartData = await fetchData(timeRange);
+            activeAddressesChart.data.labels = chartData.map(entry => entry.x);
+            activeAddressesChart.data.datasets[0].data = chartData.map(entry => entry.y);
+            activeAddressesChart.update();
+        }
+
+        document.getElementById('time-range').addEventListener('change', function() {
+            updateChart(this.value);
+        });
+
+        const ctx = document.getElementById('active-addresses-chart').getContext('2d');
+        const activeAddressesChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Active Addresses',
+                    data: [],
+                    borderColor: 'blue',
+                    fill: false
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: { 
+                        type: 'time', 
+                        time: { unit: 'day' } 
+                    },
+                    y: { beginAtZero: false }
+                }
+            }
+        });
+
+        updateChart('7d');
+    </script>
+</body>
+</html>
